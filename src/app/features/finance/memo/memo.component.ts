@@ -57,7 +57,7 @@ import { BadgeComponent } from '../../../shared/components/badge/badge.component
         </thead>
         <tbody>
           <tr *ngFor="let row of filteredRows(); let i = index" [style.animationDelay.ms]="i * 30">
-            <td>{{ row.documentno }}</td>
+            <td>{{ row.documentnumber }}</td>
             <td>{{ row.fiscalyear }}</td>
             <td>{{ row.companycode }}</td>
             <td>{{ row.amount | currencyInr }}</td>

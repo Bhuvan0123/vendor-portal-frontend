@@ -24,18 +24,20 @@ import { LoadingSpinnerComponent } from '../loading-spinner/loading-spinner.comp
         <section class="body">
           <div class="divider"><span>Items</span></div>
           <div *ngIf="loadingItems" class="skeleton row" style="height: 90px"></div>
-          <table *ngIf="!loadingItems && items.length">
-            <thead>
-              <tr>
-                <th *ngFor="let c of itemColumns">{{ c }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let item of items">
-                <td *ngFor="let c of itemColumns">{{ item[c] }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="table-wrap" *ngIf="!loadingItems && items.length">
+            <table>
+              <thead>
+                <tr>
+                  <th *ngFor="let c of itemColumns">{{ c }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of items">
+                  <td *ngFor="let c of itemColumns">{{ item[c] }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
           <div *ngIf="!loadingItems && !items.length" class="empty">No items found</div>
 
           <div class="divider"><span>Document Preview</span></div>
@@ -62,7 +64,8 @@ import { LoadingSpinnerComponent } from '../loading-spinner/loading-spinner.comp
       .panel {
         width: min(860px, 100%);
         max-height: 85vh;
-        overflow: auto;
+        overflow-y: auto;
+        overflow-x: hidden;
         background: var(--white);
         border-radius: var(--radius-xl);
         box-shadow: var(--shadow-lg);
@@ -120,8 +123,16 @@ import { LoadingSpinnerComponent } from '../loading-spinner/loading-spinner.comp
         flex: 1;
         border-top: 1px solid var(--clr-200);
       }
-      table {
+
+      .table-wrap {
+        overflow-x: auto;
         margin-bottom: 10px;
+      }
+
+      table {
+        width: max-content;
+        min-width: 100%;
+        border-collapse: collapse;
       }
       th {
         background: var(--clr-700);

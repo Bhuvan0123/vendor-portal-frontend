@@ -35,16 +35,18 @@ import { DetailPopupComponent } from '../../../../shared/components/detail-popup
             <th>PO Number</th>
             <th>Movement Type</th>
             <th>Plant</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let row of visibleRows(); let i = index" [style.animationDelay.ms]="i * 30" (click)="open(row)">
+          <tr *ngFor="let row of visibleRows(); let i = index" [style.animationDelay.ms]="i * 30">
             <td>{{ row.materialdoc }}</td>
             <td>{{ row.docyear }}</td>
             <td>{{ row.postingdate | dateFormat }}</td>
             <td>{{ row.ponumber }}</td>
             <td>{{ row.movementtype }}</td>
             <td>{{ row.plant }}</td>
+            <td class="action"><button class="eye" type="button" (click)="open(row)">👁</button></td>
           </tr>
         </tbody>
       </table>
@@ -94,6 +96,15 @@ import { DetailPopupComponent } from '../../../../shared/components/detail-popup
 
       .table-wrap {
         overflow-x: auto;
+      }
+      .action {
+        text-align: center;
+      }
+
+      .eye {
+        background: var(--clr-100);
+        color: var(--clr-700);
+        padding: 4px 10px;
       }
       .row {
         height: 30px;

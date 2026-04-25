@@ -28,13 +28,25 @@ import { InvoicePopupComponent } from '../../../shared/components/invoice-popup/
         <button type="button" class="ghost-btn" (click)="clearSearch()">Clear</button>
       </div>
 
-      <section class="chart-card">
-        <h3>Invoice Volume Trend</h3>
-        <div class="bars">
-          <div class="bar-col" *ngFor="let item of monthChart()">
-            <div class="bar" [style.height.%]="item.height"></div>
-            <span>{{ item.label }}</span>
-          </div>
+      <section class="analytics-card">
+        <div class="analytics-head">
+          <h3>Invoice Analytics</h3>
+          <span>Based on filtered results</span>
+        </div>
+
+        <div class="kpi-grid">
+          <article class="kpi">
+            <p>Average Invoice</p>
+            <h4>{{ averageAmount() | currencyInr }}</h4>
+          </article>
+          <article class="kpi">
+            <p>Highest Invoice</p>
+            <h4>{{ maxAmount() | currencyInr }}</h4>
+          </article>
+          <article class="kpi">
+            <p>Active Months</p>
+            <h4>{{ activeMonths() }}</h4>
+          </article>
         </div>
       </section>
 
@@ -127,44 +139,63 @@ import { InvoicePopupComponent } from '../../../shared/components/invoice-popup/
         color: var(--clr-700);
       }
 
-      .chart-card {
+      .analytics-card {
         background: var(--white);
         border-radius: var(--radius-lg);
         box-shadow: var(--shadow-sm);
         padding: 14px 16px;
       }
 
-      .chart-card h3 {
-        margin: 0 0 10px;
+      .analytics-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .analytics-head h3 {
+        margin: 0;
         color: var(--clr-700);
         font-size: 14px;
       }
 
-      .bars {
-        display: grid;
-        grid-template-columns: repeat(12, minmax(0, 1fr));
-        gap: 6px;
-        align-items: end;
-        height: 120px;
-      }
-
-      .bar-col {
-        display: grid;
-        gap: 6px;
-        align-items: end;
-        justify-items: center;
-      }
-
-      .bar {
-        width: 100%;
-        min-height: 4px;
-        border-radius: 6px 6px 0 0;
-        background: linear-gradient(180deg, var(--clr-300), var(--clr-600));
-      }
-
-      .bar-col span {
+      .analytics-head span {
         color: var(--clr-500);
-        font-size: 11px;
+        font-size: 12px;
+      }
+
+      .kpi-grid {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-top: 12px;
+      }
+
+      .kpi {
+        background: var(--clr-50);
+        border-left: 3px solid var(--clr-400);
+        border-radius: var(--radius-md);
+        padding: 10px 12px;
+      }
+
+      .kpi p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--clr-500);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .kpi h4 {
+        margin: 6px 0 0;
+        color: var(--clr-700);
+        font-size: 22px;
+      }
+
+      @media (max-width: 900px) {
+        .kpi-grid {
+          grid-template-columns: 1fr;
+        }
       }
       table {
         background: var(--white);
@@ -206,25 +237,30 @@ export class InvoicesComponent implements OnInit {
     return this.rows().filter((row) => String(row.invoicenumber).toLowerCase().includes(term));
   });
 
-  readonly monthChart = computed(() => {
-    const buckets = new Array<number>(12).fill(0);
+  readonly activeMonths = computed(() => {
+    const monthKeys = new Set<string>();
     for (const row of this.filtered()) {
-      const raw = String(row.postingdate || row.invoicedate || '');
-      if (raw.length === 8) {
-        const monthIndex = Number(raw.substring(4, 6)) - 1;
-        if (monthIndex >= 0 && monthIndex < 12) {
-          buckets[monthIndex] += 1;
+      const rawDate = String(row.postingdate || row.invoicedate || '');
+      if (rawDate.length === 8) {
+        const year = Number(rawDate.substring(0, 4));
+        const monthIndex = Number(rawDate.substring(4, 6)) - 1;
+        if (Number.isFinite(year) && monthIndex >= 0 && monthIndex < 12) {
+          monthKeys.add(`${year}-${String(monthIndex + 1).padStart(2, '0')}`);
         }
       }
     }
-    const max = Math.max(...buckets, 1);
-    return buckets.map((count, index) => ({
-      label: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][index],
-      height: (count / max) * 100
-    }));
+    return monthKeys.size;
   });
 
   readonly totalAmount = computed(() => this.filtered().reduce((acc, row) => acc + Number(row.amount || 0), 0));
+  readonly averageAmount = computed(() => {
+    const rows = this.filtered();
+    if (!rows.length) {
+      return 0;
+    }
+    return this.totalAmount() / rows.length;
+  });
+  readonly maxAmount = computed(() => this.filtered().reduce((max, row) => Math.max(max, Number(row.amount || 0)), 0));
 
   constructor(
     private readonly auth: AuthService,

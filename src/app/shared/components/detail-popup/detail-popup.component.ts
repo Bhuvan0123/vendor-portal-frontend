@@ -42,20 +42,22 @@ import { CommonModule } from '@angular/common';
             <div class="skeleton row" *ngFor="let r of [1, 2, 3]"></div>
           </div>
 
-          <div *ngIf="!loading && !items?.length" class="empty">No items found</div>
+          <div *ngIf="!loading && !items.length" class="empty">No items found</div>
 
-          <table *ngIf="!loading && items?.length">
-            <thead>
-              <tr>
-                <th *ngFor="let col of itemColumns">{{ col }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let item of items; let i = index" [style.animationDelay.ms]="i * 30">
-                <td *ngFor="let col of itemColumns">{{ item[col] }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="table-wrap" *ngIf="!loading && items.length">
+            <table>
+              <thead>
+                <tr>
+                  <th *ngFor="let col of itemColumns">{{ col }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of items; let i = index" [style.animationDelay.ms]="i * 30">
+                  <td *ngFor="let col of itemColumns">{{ item[col] }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </section>
       </div>
     </div>
@@ -76,7 +78,8 @@ import { CommonModule } from '@angular/common';
       .panel {
         width: min(760px, 100%);
         max-height: 85vh;
-        overflow: auto;
+        overflow-y: auto;
+        overflow-x: hidden;
         background: var(--white);
         border-radius: var(--radius-xl);
         box-shadow: var(--shadow-lg);
@@ -134,6 +137,16 @@ import { CommonModule } from '@angular/common';
 
       .body {
         padding: 18px 22px 24px;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        width: max-content;
+        min-width: 100%;
+        border-collapse: collapse;
       }
 
       .divider {

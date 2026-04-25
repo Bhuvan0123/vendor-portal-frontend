@@ -1,9 +1,21 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FinanceSummaryWidgetComponent } from './widgets/finance-summary-widget/finance-summary-widget.component';
 import { RfqWidgetComponent } from './widgets/rfq-widget/rfq-widget.component';
 import { PoWidgetComponent } from './widgets/po-widget/po-widget.component';
 import { GrWidgetComponent } from './widgets/gr-widget/gr-widget.component';
+import { AuthService } from '../../core/services/auth.service';
+import { RfqService } from '../../core/services/rfq.service';
+import { PoService } from '../../core/services/po.service';
+import { GrService } from '../../core/services/gr.service';
+import { FinanceService } from '../../core/services/finance.service';
+import { forkJoin } from 'rxjs';
+
+type InsightMetric = {
+  label: string;
+  value: number;
+  toneClass: 'l1' | 'l2' | 'l3' | 'l4';
+};
 
 @Component({
   selector: 'app-dashboard',
@@ -21,10 +33,15 @@ import { GrWidgetComponent } from './widgets/gr-widget/gr-widget.component';
       <section class="insight-card">
         <h3>Workspace Insights</h3>
         <div class="insight-grid">
-          <div class="insight"><span>RFQ</span><div class="line l1"></div></div>
-          <div class="insight"><span>PO</span><div class="line l2"></div></div>
-          <div class="insight"><span>GR</span><div class="line l3"></div></div>
-          <div class="insight"><span>Finance</span><div class="line l4"></div></div>
+          <div class="insight" *ngFor="let metric of insights(); trackBy: trackByLabel">
+            <div class="insight-head">
+              <span>{{ metric.label }}</span>
+              <strong>{{ metric.value }}</strong>
+            </div>
+            <div class="line-track">
+              <div class="line" [ngClass]="metric.toneClass" [style.width.%]="insightWidth(metric.value)"></div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -88,34 +105,51 @@ import { GrWidgetComponent } from './widgets/gr-widget/gr-widget.component';
         padding: 10px;
       }
 
+      .insight-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
       .insight span {
         color: var(--clr-600);
         font-weight: 600;
       }
 
-      .line {
+      .insight strong {
+        color: var(--clr-700);
+        font-size: 18px;
+        line-height: 1;
+      }
+
+      .line-track {
         margin-top: 8px;
         height: 8px;
         border-radius: 8px;
+        overflow: hidden;
+        background: var(--clr-200);
+      }
+
+      .line {
+        height: 8px;
+        border-radius: 8px;
+        transition: width 0.35s ease;
       }
 
       .l1 {
-        width: 75%;
         background: var(--clr-500);
       }
 
       .l2 {
-        width: 58%;
         background: var(--clr-400);
       }
 
       .l3 {
-        width: 42%;
         background: var(--clr-300);
       }
 
       .l4 {
-        width: 88%;
         background: var(--clr-600);
       }
 
@@ -169,7 +203,51 @@ import { GrWidgetComponent } from './widgets/gr-widget/gr-widget.component';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
   readonly today = new Date();
   readonly activeTab = signal<'rfq' | 'po' | 'gr'>('rfq');
+  readonly insights = signal<InsightMetric[]>([
+    { label: 'RFQ', value: 0, toneClass: 'l1' },
+    { label: 'PO', value: 0, toneClass: 'l2' },
+    { label: 'GR', value: 0, toneClass: 'l3' },
+    { label: 'Finance', value: 0, toneClass: 'l4' }
+  ]);
+  readonly maxInsightValue = computed(() => Math.max(...this.insights().map((metric) => metric.value), 0));
+
+  constructor(
+    private readonly auth: AuthService,
+    private readonly rfqService: RfqService,
+    private readonly poService: PoService,
+    private readonly grService: GrService,
+    private readonly financeService: FinanceService
+  ) {}
+
+  ngOnInit(): void {
+    const vendorId = this.auth.getVendorId();
+    forkJoin({
+      rfq: this.rfqService.getHeaders(vendorId),
+      po: this.poService.getHeaders(vendorId),
+      gr: this.grService.getHeaders(vendorId),
+      invoices: this.financeService.getInvoices(vendorId)
+    }).subscribe(({ rfq, po, gr, invoices }) => {
+      this.insights.set([
+        { label: 'RFQ', value: rfq.length, toneClass: 'l1' },
+        { label: 'PO', value: po.length, toneClass: 'l2' },
+        { label: 'GR', value: gr.length, toneClass: 'l3' },
+        { label: 'Finance', value: invoices.length, toneClass: 'l4' }
+      ]);
+    });
+  }
+
+  insightWidth(value: number): number {
+    const max = this.maxInsightValue();
+    if (!max || !value) {
+      return 0;
+    }
+    return Math.max(18, Math.round((value / max) * 100));
+  }
+
+  trackByLabel(_: number, metric: InsightMetric): string {
+    return metric.label;
+  }
 }
