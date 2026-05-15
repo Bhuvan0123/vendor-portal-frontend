@@ -24,19 +24,7 @@ import { BadgeComponent } from '../../../shared/components/badge/badge.component
         <button type="button" [class.active]="activeType() === 'DEBIT'" (click)="activeType.set('DEBIT')">Debit</button>
       </div>
 
-      <section class="chart-card">
-        <h3>Debit vs Credit</h3>
-        <div class="pair-bars">
-          <div class="bar-row">
-            <span>Credit</span>
-            <div class="track"><div class="fill credit" [style.width.%]="amountPct(totalCredit())"></div></div>
-          </div>
-          <div class="bar-row">
-            <span>Debit</span>
-            <div class="track"><div class="fill debit" [style.width.%]="amountPct(totalDebit())"></div></div>
-          </div>
-        </div>
-      </section>
+      
 
       <div *ngIf="error()" class="error-banner">
         <span>Failed to load data. Please try again.</span>

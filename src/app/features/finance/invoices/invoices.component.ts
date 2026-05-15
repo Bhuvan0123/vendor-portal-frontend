@@ -16,10 +16,7 @@ import { InvoicePopupComponent } from '../../../shared/components/invoice-popup/
     <section class="page">
       <header>
         <h2>Invoices</h2>
-        <div class="meta">
-          <app-badge [label]="'Total: ' + filtered().length"></app-badge>
-          <span class="amount">{{ totalAmount() | currencyInr }}</span>
-        </div>
+        
       </header>
 
       <div class="filter">
@@ -36,17 +33,14 @@ import { InvoicePopupComponent } from '../../../shared/components/invoice-popup/
 
         <div class="kpi-grid">
           <article class="kpi">
-            <p>Average Invoice</p>
-            <h4>{{ averageAmount() | currencyInr }}</h4>
+            <p>Total Number of invoices</p>
+            <h4>{{ filtered().length }}</h4>
           </article>
           <article class="kpi">
-            <p>Highest Invoice</p>
-            <h4>{{ maxAmount() | currencyInr }}</h4>
+            <p>Total Amount</p>
+            <h4>{{ totalAmount() | currencyInr }}</h4>
           </article>
-          <article class="kpi">
-            <p>Active Months</p>
-            <h4>{{ activeMonths() }}</h4>
-          </article>
+          
         </div>
       </section>
 
@@ -69,7 +63,6 @@ import { InvoicePopupComponent } from '../../../shared/components/invoice-popup/
             <th>Posting Date</th>
             <th>Amount</th>
             <th>Currency</th>
-            <th>Action</th>
             <th>PDF</th>
           </tr>
         </thead>
@@ -81,7 +74,6 @@ import { InvoicePopupComponent } from '../../../shared/components/invoice-popup/
             <td>{{ row.postingdate | dateFormat }}</td>
             <td>{{ row.amount | currencyInr }}</td>
             <td>{{ row.currency }}</td>
-            <td><app-badge label="Billed"></app-badge></td>
             <td>
               <button type="button" class="pdf-btn" (click)="downloadInvoicePdf(row, $event)">
                 {{ downloadingKey() === (row.invoicenumber + '-' + row.fiscalyear) ? 'Downloading...' : 'Download PDF' }}

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../../../core/services/auth.service';
 import { RfqService } from '../../../../core/services/rfq.service';
@@ -29,13 +29,25 @@ import { DetailPopupComponent } from '../../../../shared/components/detail-popup
       <div *ngIf="!loading() && !headers().length" class="empty">No RFQs found</div>
 
       <div class="table-wrap" *ngIf="!loading() && headers().length">
+
+      <div class="table-controls">
+        <input placeholder="Search" (input)="searchTerm.set($any($event.target).value.toLowerCase())" />
+        <label>Page size:
+          <select (change)="setPageSize($any($event.target).value)">
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+          </select>
+        </label>
+      </div>
+
       <table>
         <thead>
           <tr>
-            <th>RFQ Number</th>
-            <th>Doc Type</th>
-            <th>Created Date</th>
-            <th>Company Code</th>
+            <th (click)="toggleSort('rfqnumber')">RFQ Number <span *ngIf="sortKey() === 'rfqnumber'">{{ sortDir() === 1 ? '▲' : '▼' }}</span></th>
+            <th (click)="toggleSort('doctype')">Doc Type <span *ngIf="sortKey() === 'doctype'">{{ sortDir() === 1 ? '▲' : '▼' }}</span></th>
+            <th (click)="toggleSort('createddate')">Created Date <span *ngIf="sortKey() === 'createddate'">{{ sortDir() === 1 ? '▲' : '▼' }}</span></th>
+            <th (click)="toggleSort('companycode')">Company Code <span *ngIf="sortKey() === 'companycode'">{{ sortDir() === 1 ? '▲' : '▼' }}</span></th>
             <th>Action</th>
           </tr>
         </thead>
@@ -50,7 +62,11 @@ import { DetailPopupComponent } from '../../../../shared/components/detail-popup
         </tbody>
       </table>
       </div>
-      <a *ngIf="headers().length > 5" (click)="expanded.set(!expanded())">{{ expanded() ? 'Show Less' : 'View All' }}</a>
+      <div class="pagination" *ngIf="processed().length > pageSize()">
+        <button type="button" (click)="prevPage()" [disabled]="page() === 0">Prev</button>
+        <span>Page {{ page() + 1 }} / {{ totalPages() }}</span>
+        <button type="button" (click)="nextPage()" [disabled]="page() + 1 >= totalPages()">Next</button>
+      </div>
     </section>
 
     <app-detail-popup
@@ -106,6 +122,67 @@ import { DetailPopupComponent } from '../../../../shared/components/detail-popup
         color: var(--clr-600);
         cursor: pointer;
       }
+      .table-controls {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .table-controls input {
+        flex: 1;
+        min-width: 200px;
+        padding: 8px 12px;
+        border: 1px solid var(--clr-300);
+        border-radius: var(--radius-sm);
+        font-size: 14px;
+      }
+      .table-controls label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--clr-600);
+        font-size: 14px;
+      }
+      .table-controls select {
+        padding: 6px 10px;
+        border: 1px solid var(--clr-300);
+        border-radius: var(--radius-sm);
+        font-size: 14px;
+      }
+      table {
+        margin: 16px 0;
+      }
+      .pagination {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: center;
+        margin-top: 16px;
+        padding-top: 12px;
+        border-top: 1px solid var(--clr-200);
+      }
+      .pagination button {
+        padding: 8px 16px;
+        border: 1px solid var(--clr-300);
+        border-radius: var(--radius-sm);
+        background: var(--clr-50);
+        color: var(--clr-700);
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+      }
+      .pagination button:hover:not(:disabled) {
+        background: var(--clr-200);
+      }
+      .pagination button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .pagination span {
+        color: var(--clr-600);
+        font-size: 14px;
+      }
       .table-wrap {
         overflow-x: auto;
       }
@@ -129,6 +206,37 @@ export class RfqWidgetComponent implements OnInit {
   readonly error = signal(false);
   readonly expanded = signal(false);
 
+  readonly searchTerm = signal('');
+  readonly sortKey = signal('');
+  readonly sortDir = signal(1);
+  readonly page = signal(0);
+  readonly pageSize = signal(5);
+
+  readonly processed = computed(() => {
+    const term = this.searchTerm().trim();
+    let rows = this.headers();
+    if (term) {
+      rows = rows.filter((r: any) =>
+        String(r.rfqnumber).toLowerCase().includes(term) ||
+        String(r.doctype || '').toLowerCase().includes(term) ||
+        String(r.companycode || '').toLowerCase().includes(term)
+      );
+    }
+    const key = this.sortKey();
+    if (key) {
+      rows = [...rows].sort((a: any, b: any) => {
+        const av = String(a[key] ?? '').toLowerCase();
+        const bv = String(b[key] ?? '').toLowerCase();
+        if (av < bv) return -1 * this.sortDir();
+        if (av > bv) return 1 * this.sortDir();
+        return 0;
+      });
+    }
+    return rows;
+  });
+
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.processed().length / this.pageSize())));
+
   readonly selected = signal<any | null>(null);
   readonly items = signal<any[]>([]);
   readonly itemsLoading = signal(false);
@@ -143,7 +251,9 @@ export class RfqWidgetComponent implements OnInit {
   }
 
   visibleRows(): any[] {
-    return this.expanded() ? this.headers() : this.headers().slice(0, 5);
+    const rows = this.processed();
+    const start = this.page() * this.pageSize();
+    return rows.slice(start, start + this.pageSize());
   }
 
   load(): void {
@@ -163,6 +273,30 @@ export class RfqWidgetComponent implements OnInit {
       this.items.set(items);
       this.itemsLoading.set(false);
     });
+  }
+
+  toggleSort(key: string): void {
+    if (this.sortKey() === key) {
+      this.sortDir.set(-this.sortDir());
+    } else {
+      this.sortKey.set(key);
+      this.sortDir.set(1);
+    }
+    this.page.set(0);
+  }
+
+  prevPage(): void {
+    if (this.page() > 0) this.page.set(this.page() - 1);
+  }
+
+  nextPage(): void {
+    if (this.page() + 1 < this.totalPages()) this.page.set(this.page() + 1);
+  }
+
+  setPageSize(sz: string | number): void {
+    const n = Number(sz);
+    this.pageSize.set(Number.isFinite(n) && n > 0 ? n : 5);
+    this.page.set(0);
   }
 
   closePopup(): void {
